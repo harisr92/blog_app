@@ -1,0 +1,10 @@
+{% extends 'layouts/main' %}
+
+{% block content %}
+  <h1>Posts</h1>
+  <ul>
+    {% for p in posts %}
+      <li>{{ p.title }}</li>
+    {% endfor %}
+  </ul>
+{% endblock content %}
