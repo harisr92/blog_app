@@ -1,7 +1,7 @@
-use rocket_dyn_templates::Template;
+use blog_web::config;
 use blog_web::routes;
 use rocket_db_pools::Database;
-use blog_web::config;
+use rocket_dyn_templates::Template;
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {

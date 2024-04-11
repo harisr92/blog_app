@@ -1,5 +1,6 @@
 pub mod posts;
+pub mod users;
 
 pub fn build() -> Vec<rocket::Route> {
-    rocket::routes![posts::index]
+    rocket::routes![posts::index, users::new, users::create]
 }

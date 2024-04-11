@@ -10,3 +10,20 @@ diesel::table! {
         status -> Varchar,
     }
 }
+
+diesel::table! {
+    users (id) {
+        id -> Unsigned<Bigint>,
+        #[max_length = 30]
+        first_name -> Nullable<Varchar>,
+        #[max_length = 30]
+        last_name -> Nullable<Varchar>,
+        #[max_length = 252]
+        email -> Varchar,
+    }
+}
+
+diesel::allow_tables_to_appear_in_same_query!(
+    posts,
+    users,
+);

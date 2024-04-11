@@ -4,6 +4,10 @@
     <title>Blog App | {{ title }}</title>
   </head>
   <body>
+    {% if flash_message %}
+      <h1>{{ flash_message }}
+    {% endif %}
+
     {% block content %}{% endblock content %}
   </body>
 </html>

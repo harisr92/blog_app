@@ -1,0 +1,20 @@
+{% extends 'layouts/main' %}
+
+{% block content %}
+  <h1>New User</h1>
+  <form method="post" action="/users">
+    <div>
+      <label for="user_first_name">First name</label>
+      <input type="text" name="first_name" value="" id="user_first_name" />
+    </div>
+    <div>
+      <label for="user_last_name">Last name</label>
+      <input type="text" name="last_name" value="" id="user_last_name" />
+    </div>
+    <div>
+      <label for="Email">First name</label>
+      <input type="text" name="email" value="" id="user_email" />
+    </div>
+    <input type="submit" name="user-submit" value="Submit" />
+  </form>
+{% endblock content %}
