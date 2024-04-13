@@ -2,10 +2,27 @@
 <html>
   <head>
     <title>Blog App | {{ title }}</title>
+    <style type="text/css" media="screen">
+      .flash-message {
+        padding: 5px;
+      }
+      .flash-message.danger {
+        color: black;
+        background: red;
+      }
+      .flash-message.warn {
+        color: black;
+        background: yellow;
+      }
+      .flash-message.success {
+        color: black;
+        background: green;
+      }
+    </style>
   </head>
   <body>
-    {% if flash_message %}
-      <h1>{{ flash_message }}
+    {% if flash %}
+      {{ flash | safe }}
     {% endif %}
 
     {% block content %}{% endblock content %}

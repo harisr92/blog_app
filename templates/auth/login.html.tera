@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Blog App</title>
+    <style type="text/css" media="screen">
+      .flash-message {
+        padding: 5px;
+      }
+      .flash-message.danger {
+        color: black;
+        background: red;
+      }
+      .flash-message.warn {
+        color: black;
+        background: yellow;
+      }
+      .flash-message.success {
+        color: black;
+        background: green;
+      }
+    </style>
+
+  </head>
+  <body>
+    {% if flash %}
+      {{ flash | safe }}
+    {% endif %}
+
+    <div class="login-page">
+      <h1>Login</h1>
+
+      <div class="login-page__form">
+        <form method="post" action="/auth/login">
+          <div class="login-page__form_input">
+            <label for="user-name">User name</label>
+            <input type="text" name="user_name" value="" id="user-name" />
+          </div>
+          <div class="login-page__form_input">
+            <label for="password">Password</label>
+            <input type="password" name="password" value="" id="password" />
+          </div>
+          <input type="submit" name="Submit" value="Ok" />
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

@@ -7,12 +7,13 @@ use rocket_dyn_templates::{context, Template};
 use crate::config::Db;
 use crate::schema::{posts, users};
 
-#[derive(Debug, Insertable, rocket::FromForm)]
-#[diesel(table_name = crate::schema::users)]
+#[derive(Debug, rocket::FromForm)]
 pub struct UserInputable {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub email: String,
+    pub password: String,
+    pub confirm_password: String,
 }
 
 #[rocket::get("/users/new")]
@@ -42,8 +43,33 @@ pub async fn create<'r>(
         ));
     }
 
+    let inner = user_input.into_inner();
+    if inner.password != inner.confirm_password {
+        return Ok(Flash::error(
+            Redirect::to("/users/new"),
+            "Password does not match",
+        ));
+    }
+
+    let u = crate::models::users::User::build(
+        inner.first_name,
+        inner.last_name,
+        inner.email,
+        inner.password,
+    );
+
+    if u.is_err() {
+        return Err(Template::render(
+            "error",
+            context! {
+                title: "Error",
+                error: u.unwrap_err(),
+            },
+        ));
+    }
+
     let values = diesel::insert_into(users::table)
-        .values(&user_input.into_inner())
+        .values(&u.unwrap())
         .execute(&mut db)
         .await;
 

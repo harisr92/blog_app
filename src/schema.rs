@@ -21,10 +21,11 @@ diesel::table! {
         last_name -> Nullable<Varchar>,
         #[max_length = 252]
         email -> Varchar,
+        #[max_length = 256]
+        encrypted_password -> Nullable<Varchar>,
+        #[max_length = 50]
+        password_salt -> Nullable<Varchar>,
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    posts,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(posts, users,);
