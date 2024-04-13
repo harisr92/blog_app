@@ -8,6 +8,7 @@ diesel::table! {
         body -> Text,
         #[max_length = 50]
         status -> Varchar,
+        user_id -> Unsigned<Bigint>,
     }
 }
 

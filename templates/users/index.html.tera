@@ -1,0 +1,18 @@
+{% extends 'layouts/main' %}
+
+{% block content %}
+  <ul>
+    {% for user in users %}
+        <li>
+          {{ user.0.first_name }}
+          <ul>
+            {% for post in user.1 %}
+              <li>
+                {{ post.title }}
+              </li>
+            {% endfor %}
+          </ul>
+        </li>
+    {% endfor %}
+  </ul>
+{% endblock %}

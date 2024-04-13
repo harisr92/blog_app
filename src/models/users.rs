@@ -1,7 +1,9 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Queryable, Selectable, Insertable, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Queryable, Selectable, Insertable, Serialize, Deserialize, Identifiable, PartialEq,
+)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::users)]
 #[diesel(check_for_backend(diesel::mysql::Mysql))]

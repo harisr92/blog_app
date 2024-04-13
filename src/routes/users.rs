@@ -5,7 +5,7 @@ use rocket_db_pools::{diesel::prelude::*, Connection};
 use rocket_dyn_templates::{context, Template};
 
 use crate::config::Db;
-use crate::schema::users;
+use crate::schema::{posts, users};
 
 #[derive(Debug, Insertable, rocket::FromForm)]
 #[diesel(table_name = crate::schema::users)]
@@ -56,6 +56,54 @@ pub async fn create<'r>(
             "error",
             context! {
                 title: "Error",
+                error: e.to_string(),
+            },
+        )),
+    }
+}
+
+#[rocket::get("/users/posts")]
+pub async fn users_posts(mut db: Connection<Db>) -> Result<Template, Template> {
+    let all_users = users::table
+        .left_join(posts::table.on(posts::user_id.eq(users::id)))
+        .select((
+            crate::models::users::User::as_select(),
+            Option::<crate::models::posts::Post>::as_select(),
+        ))
+        .distinct()
+        .load::<(
+            crate::models::users::User,
+            Option<crate::models::posts::Post>,
+        )>(&mut db)
+        .await;
+
+    match all_users {
+        Ok(data) => {
+            let mut grouped_data: Vec<(
+                crate::models::users::User,
+                Vec<Option<crate::models::posts::Post>>,
+            )> = Vec::new();
+
+            for user in data {
+                if let Some(with_user) = grouped_data.iter_mut().find(|u| u.0 == user.0) {
+                    with_user.1.push(user.1)
+                } else {
+                    grouped_data.push((user.0, vec![user.1]));
+                };
+            }
+
+            Ok(Template::render(
+                "users/index",
+                context! {
+                    title: "Blogs",
+                    users: grouped_data,
+                },
+            ))
+        }
+        Err(e) => Err(Template::render(
+            "error",
+            context! {
+                title: "error",
                 error: e.to_string(),
             },
         )),
