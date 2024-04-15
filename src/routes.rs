@@ -14,5 +14,6 @@ pub fn build() -> Vec<rocket::Route> {
         users::users_posts,
         auth::index,
         auth::create,
+        auth::delete,
     ]
 }

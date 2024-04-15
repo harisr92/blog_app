@@ -52,7 +52,7 @@ impl UserSession<'_> {
         }
     }
 
-    pub fn signin(&self, signed_user: crate::models::users::User) {
+    pub fn signin(&self, signed_user: &crate::models::users::User) {
         if let Ok(serialized_user) = serde_json::to_string(&signed_user.id) {
             if let Some(auth_cookies) = self.cookies {
                 let cookie = Cookie::build(("blog_auth", serialized_user));
@@ -63,11 +63,7 @@ impl UserSession<'_> {
         }
     }
 
-    pub fn signout(self, signed_user: crate::models::users::User) -> Result<bool, &'static str> {
-        if self.user_id != Some(signed_user.id) {
-            panic!("You cannot signout");
-        }
-
+    pub fn signout(self) -> Result<bool, &'static str> {
         if let Some(cookies) = self.cookies {
             cookies.remove_private("blog_auth");
         }

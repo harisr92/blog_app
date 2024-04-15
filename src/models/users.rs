@@ -1,8 +1,10 @@
+use crate::schema::users;
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
 use rocket_db_pools::diesel::prelude::*;
+use rocket_db_pools::Connection;
 use serde::{Deserialize, Serialize};
 
 #[derive(
@@ -48,10 +50,36 @@ impl User {
         u
     }
 
+    pub async fn find_by_id(id: u64, mut db: Connection<crate::config::Db>) -> Option<Self> {
+        let user = crate::schema::users::table
+            .filter(users::id.eq(id))
+            .first(&mut db)
+            .await;
+
+        match user {
+            Ok(u) => Some(u),
+            Err(_) => None,
+        }
+    }
+
+    pub async fn find_by_email(
+        email: String,
+        mut db: Connection<crate::config::Db>,
+    ) -> Option<Self> {
+        let user = crate::schema::users::table
+            .filter(users::email.eq(email))
+            .first(&mut db)
+            .await;
+
+        match user {
+            Ok(u) => Some(u),
+            Err(_) => None,
+        }
+    }
+
     pub fn set_password(&mut self, password: String) {
         let salt = SaltString::generate(&mut OsRng);
         let argon = Argon2::default();
-        println!("{:?}", salt);
 
         if let Ok(password_hash) = argon.hash_password(password.as_bytes(), &salt) {
             self.encrypted_password = Some(password_hash.to_string());

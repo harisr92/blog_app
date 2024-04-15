@@ -43,10 +43,19 @@ pub async fn create<'r>(
         .await
     {
         if loaded_user.compare_password(password) {
-            user_session.signin(loaded_user);
+            user_session.signin(&loaded_user);
             return Flash::success(Redirect::to("/"), "You are signed in");
         }
     };
 
     Flash::error(Redirect::to("/login"), "Invlaid user name or password")
+}
+
+#[rocket::get("/auth/logout")]
+pub async fn delete(
+    user_session: crate::config::UserSession<'_>,
+) -> Result<Redirect, &'static str> {
+    let _ = user_session.signout();
+
+    Ok(Redirect::to("/"))
 }

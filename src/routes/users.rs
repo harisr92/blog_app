@@ -5,6 +5,7 @@ use rocket_db_pools::{diesel::prelude::*, Connection};
 use rocket_dyn_templates::{context, Template};
 
 use crate::config::Db;
+use crate::models::users::User;
 use crate::schema::{posts, users};
 
 #[derive(Debug, rocket::FromForm)]
@@ -41,6 +42,7 @@ pub async fn new(flash: Option<FlashMessage<'_>>) -> Result<Template, String> {
 pub async fn create<'r>(
     mut db: Connection<Db>,
     user_input: Form<UserInputable>,
+    user_session: crate::config::UserSession<'_>,
 ) -> Result<Flash<Redirect>, Template> {
     if !validate_email(user_input.email.clone(), &mut db).await {
         return Ok(Flash::error(
@@ -70,10 +72,20 @@ pub async fn create<'r>(
         .await;
 
     match values {
-        Ok(_) => Ok(Flash::success(
-            Redirect::to("/"),
-            "User created successfully",
-        )),
+        Ok(_) => {
+            if let Some(user) = User::find_by_email(u.email, db).await {
+                user_session.signin(&user);
+                Ok(Flash::success(
+                    Redirect::to(rocket::uri!(profile())),
+                    "User created successfully",
+                ))
+            } else {
+                Ok(Flash::success(
+                    Redirect::to("/"),
+                    "User created successfully",
+                ))
+            }
+        }
         Err(e) => Err(Template::render(
             "error",
             context! {
@@ -84,64 +96,41 @@ pub async fn create<'r>(
     }
 }
 
-#[rocket::get("/users/<id>/profile")]
+#[rocket::get("/users/profile")]
 pub async fn profile<'r>(
-    id: u64,
     flash: Option<FlashMessage<'r>>,
-    mut db: Connection<Db>,
-) -> Result<Template, Template> {
-    if let Ok(user) = users::table
-        .filter(users::id.eq(id))
-        .select(crate::models::users::User::as_select())
-        .first(&mut db)
-        .await
-    {
-        Ok(Template::render(
-            "users/profile",
-            context! {
-                title: "Profile",
-                user: user,
-                flash: crate::helpers::flash_label(flash),
-            },
-        ))
-    } else {
-        Err(Template::render(
-            "error",
-            context! {
-                title: "Error",
-                error: "Could not load user"
-            },
-        ))
-    }
+    user: User,
+) -> Result<Template, &'static str> {
+    Ok(Template::render(
+        "users/profile",
+        context! {
+            title: "Profile",
+            user: user,
+            flash: crate::helpers::flash_label(flash),
+        },
+    ))
 }
 
-#[rocket::put("/users/<id>/update-password", data = "<password>")]
+#[rocket::put("/users/update-password", data = "<password>")]
 pub async fn update_password(
     password: Form<PasswordInput>,
-    id: u64,
+    mut user: User,
     mut db: Connection<Db>,
 ) -> Result<Flash<Redirect>, Flash<Redirect>> {
-    let user = users::table
-        .filter(users::id.eq(id))
-        .select(crate::models::users::User::as_select())
-        .first(&mut db)
+    user.set_password(password.into_inner().password);
+    let res = diesel::update(users::table)
+        .filter(users::id.eq(user.id))
+        .set(user)
+        .execute(&mut db)
         .await;
 
-    match user {
-        Ok(mut u) => {
-            u.set_password(password.into_inner().password);
-            let _ = diesel::update(users::table)
-                .filter(users::id.eq(id))
-                .set(u)
-                .execute(&mut db)
-                .await;
-            Ok(Flash::success(
-                Redirect::to(rocket::uri!(profile(id))),
-                "Password updated",
-            ))
-        }
+    match res {
+        Ok(_) => Ok(Flash::success(
+            Redirect::to(rocket::uri!(profile())),
+            "Password updated",
+        )),
         Err(e) => Err(Flash::error(
-            Redirect::to(rocket::uri!(profile(id))),
+            Redirect::to(rocket::uri!(profile())),
             e.to_string(),
         )),
     }
