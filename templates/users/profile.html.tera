@@ -12,7 +12,7 @@
       </thead>
     </table>
 
-    <form method="post" action="/users/{{ user.id }}/update-password">
+    <form method="post" action="/users/update-password">
       <input type="hidden" name="_method" value="PUT" />
       <div>
         <label for="user_password">Password</label>

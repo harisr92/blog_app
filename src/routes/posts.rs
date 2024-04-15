@@ -76,3 +76,7 @@ pub async fn create(
         )),
     }
 }
+
+pub fn stage() -> Vec<rocket::Route> {
+    rocket::routes![index, new, create]
+}

@@ -59,3 +59,7 @@ pub async fn delete(
 
     Ok(Redirect::to("/"))
 }
+
+pub fn stage() -> Vec<rocket::Route> {
+    rocket::routes![index, create, delete]
+}

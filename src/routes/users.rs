@@ -196,3 +196,7 @@ async fn validate_email(email: String, db: &mut Connection<Db>) -> bool {
         Err(_) => true,
     }
 }
+
+pub fn stage() -> Vec<rocket::Route> {
+    rocket::routes![new, create, profile, update_password, users_posts]
+}
