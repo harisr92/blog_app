@@ -1,0 +1,28 @@
+{% extends 'layouts/main' %}
+
+{% block content %}
+    <table width="30%">
+      <thead>
+        <th>User name</th>
+        <th>{{ user.first_name ~ " " ~ user.last_name }}</th>
+      </thead>
+      <thead>
+        <th>Number posts</th>
+        <th>0</th>
+      </thead>
+    </table>
+
+    <form method="post" action="/users/{{ user.id }}/update-password">
+      <input type="hidden" name="_method" value="PUT" />
+      <div>
+        <label for="user_password">Password</label>
+        <input type="text" name="password" value="" id="user_password" />
+      </div>
+      <div>
+        <label for="user_confirm_password">Confirm password</label>
+        <input type="password" name="confirm_password" value="" id="user_confirm_password" />
+      </div>
+      <input type="submit" name="user-submit" value="Submit" />
+    </form>
+
+{% endblock %}

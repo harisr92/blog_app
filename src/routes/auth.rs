@@ -13,7 +13,14 @@ pub struct LoginInput {
 }
 
 #[rocket::get("/login")]
-pub async fn index(flash: Option<FlashMessage<'_>>) -> Result<Template, Template> {
+pub async fn index(
+    flash: Option<FlashMessage<'_>>,
+    user: Option<crate::models::users::User>,
+) -> Result<Template, Flash<Redirect>> {
+    if let Some(_) = user {
+        return Err(Flash::error(Redirect::to("/"), "You are already logged in"));
+    };
+
     Ok(Template::render(
         "auth/login",
         context! { flash: crate::helpers::flash_label(flash) },
@@ -21,7 +28,11 @@ pub async fn index(flash: Option<FlashMessage<'_>>) -> Result<Template, Template
 }
 
 #[rocket::post("/auth/login", data = "<login>")]
-pub async fn create(login: Form<LoginInput>, mut db: Connection<Db>) -> Flash<Redirect> {
+pub async fn create<'r>(
+    login: Form<LoginInput>,
+    mut db: Connection<Db>,
+    user_session: crate::config::UserSession<'_>,
+) -> Flash<Redirect> {
     let inner_form = login.into_inner();
     let password = inner_form.password;
 
@@ -32,6 +43,7 @@ pub async fn create(login: Form<LoginInput>, mut db: Connection<Db>) -> Flash<Re
         .await
     {
         if loaded_user.compare_password(password) {
+            user_session.signin(loaded_user);
             return Flash::success(Redirect::to("/"), "You are signed in");
         }
     };

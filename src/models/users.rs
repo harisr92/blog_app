@@ -1,9 +1,21 @@
-use diesel::prelude::*;
-use rand::Rng;
+use argon2::{
+    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    Argon2,
+};
+use rocket_db_pools::diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Debug, Clone, Queryable, Selectable, Insertable, Serialize, Deserialize, Identifiable, PartialEq,
+    Debug,
+    Clone,
+    Queryable,
+    Selectable,
+    Insertable,
+    Serialize,
+    Deserialize,
+    Identifiable,
+    PartialEq,
+    AsChangeset,
 )]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::users)]
@@ -23,41 +35,82 @@ impl User {
         last_name: Option<String>,
         email: String,
         password: String,
-    ) -> Result<Self, String> {
-        let mut rng = rand::thread_rng();
-        let salt: [u8; 16] = rng.gen::<[u8; 16]>();
-        let salt_str = match std::str::from_utf8(&salt) {
-            Ok(slt) => String::from(slt),
-            Err(e) => {
-                println!("Error : {:?}", e);
-                String::from("")
-            }
+    ) -> Self {
+        let mut u = User {
+            id: 0,
+            first_name,
+            last_name,
+            email,
+            encrypted_password: None,
+            password_salt: None,
         };
-        println!("{:?}", salt_str);
+        u.set_password(password);
+        u
+    }
 
-        if let Ok(enc_pass) = bcrypt::hash_with_salt(password, 16, salt) {
-            Ok(User {
-                id: 0,
-                first_name,
-                last_name,
-                email,
-                encrypted_password: Some(enc_pass.to_string()),
-                password_salt: Some(salt_str),
-            })
-        } else {
-            Err("Could not hash password".to_string())
+    pub fn set_password(&mut self, password: String) {
+        let salt = SaltString::generate(&mut OsRng);
+        let argon = Argon2::default();
+        println!("{:?}", salt);
+
+        if let Ok(password_hash) = argon.hash_password(password.as_bytes(), &salt) {
+            self.encrypted_password = Some(password_hash.to_string());
+            self.password_salt = Some(salt.to_string());
         }
     }
 
     pub fn compare_password(&self, password: String) -> bool {
         if let Some(enc_pass) = &self.encrypted_password {
-            if let Ok(is_ok) = bcrypt::verify(password, enc_pass.as_str()) {
-                is_ok
+            let parsed_hash: PasswordHash;
+            if let Ok(res) = PasswordHash::new(&enc_pass) {
+                parsed_hash = res;
+            } else {
+                return false;
+            };
+
+            if let Ok(_) = Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
+                true
             } else {
                 false
             }
         } else {
             false
+        }
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> rocket::request::FromRequest<'r> for User {
+    type Error = ();
+
+    async fn from_request(
+        req: &'r rocket::request::Request<'_>,
+    ) -> rocket::request::Outcome<User, Self::Error> {
+        use rocket::http::Status;
+        use rocket_db_pools::{diesel::prelude::*, Connection};
+
+        let cookies = req.cookies();
+        let user_id: Option<u64> = if let Some(blog_auth) = cookies.get_private("blog_auth") {
+            serde_json::from_str(blog_auth.value()).unwrap()
+        } else {
+            None
+        };
+
+        match user_id {
+            Some(id) => {
+                let mut db: Connection<crate::config::Db> = req.guard().await.unwrap();
+
+                if let Ok(user) = crate::schema::users::table
+                    .filter(crate::schema::users::id.eq(id))
+                    .first(&mut db)
+                    .await
+                {
+                    rocket::request::Outcome::Success(user)
+                } else {
+                    rocket::request::Outcome::Error((Status::InternalServerError, ()))
+                }
+            }
+            None => rocket::request::Outcome::Error((Status::Unauthorized, ())),
         }
     }
 }

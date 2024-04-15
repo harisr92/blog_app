@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::collections::LinkedList;
 
 #[derive(
     Debug,
@@ -11,6 +12,7 @@ use serde::{Deserialize, Serialize};
     Identifiable,
     Associations,
     PartialEq,
+    Insertable,
 )]
 #[serde(crate = "rocket::serde")]
 #[diesel(belongs_to(crate::models::users::User))]
@@ -22,4 +24,26 @@ pub struct Post {
     pub body: String,
     pub status: String,
     pub user_id: u64,
+}
+
+#[derive(Debug, rocket::FromForm)]
+pub struct PostInputForm {
+    title: String,
+    content: String,
+}
+
+impl Post {
+    pub fn build_from(form: PostInputForm, user_id: u64) -> Self {
+        Post {
+            id: 0,
+            title: form.title,
+            body: form.content,
+            status: String::from(*Self::states().front().unwrap()),
+            user_id,
+        }
+    }
+
+    pub fn states() -> LinkedList<&'static str> {
+        LinkedList::from(["Draft", "Review", "Published"])
+    }
 }

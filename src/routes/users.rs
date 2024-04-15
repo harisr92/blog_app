@@ -16,6 +16,12 @@ pub struct UserInputable {
     pub confirm_password: String,
 }
 
+#[derive(Debug, rocket::FromForm)]
+pub struct PasswordInput {
+    pub password: String,
+    pub confirm_password: String,
+}
+
 #[rocket::get("/users/new")]
 pub async fn new(flash: Option<FlashMessage<'_>>) -> Result<Template, String> {
     let flash_messages = flash
@@ -58,18 +64,8 @@ pub async fn create<'r>(
         inner.password,
     );
 
-    if u.is_err() {
-        return Err(Template::render(
-            "error",
-            context! {
-                title: "Error",
-                error: u.unwrap_err(),
-            },
-        ));
-    }
-
     let values = diesel::insert_into(users::table)
-        .values(&u.unwrap())
+        .values(&u)
         .execute(&mut db)
         .await;
 
@@ -84,6 +80,69 @@ pub async fn create<'r>(
                 title: "Error",
                 error: e.to_string(),
             },
+        )),
+    }
+}
+
+#[rocket::get("/users/<id>/profile")]
+pub async fn profile<'r>(
+    id: u64,
+    flash: Option<FlashMessage<'r>>,
+    mut db: Connection<Db>,
+) -> Result<Template, Template> {
+    if let Ok(user) = users::table
+        .filter(users::id.eq(id))
+        .select(crate::models::users::User::as_select())
+        .first(&mut db)
+        .await
+    {
+        Ok(Template::render(
+            "users/profile",
+            context! {
+                title: "Profile",
+                user: user,
+                flash: crate::helpers::flash_label(flash),
+            },
+        ))
+    } else {
+        Err(Template::render(
+            "error",
+            context! {
+                title: "Error",
+                error: "Could not load user"
+            },
+        ))
+    }
+}
+
+#[rocket::put("/users/<id>/update-password", data = "<password>")]
+pub async fn update_password(
+    password: Form<PasswordInput>,
+    id: u64,
+    mut db: Connection<Db>,
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
+    let user = users::table
+        .filter(users::id.eq(id))
+        .select(crate::models::users::User::as_select())
+        .first(&mut db)
+        .await;
+
+    match user {
+        Ok(mut u) => {
+            u.set_password(password.into_inner().password);
+            let _ = diesel::update(users::table)
+                .filter(users::id.eq(id))
+                .set(u)
+                .execute(&mut db)
+                .await;
+            Ok(Flash::success(
+                Redirect::to(rocket::uri!(profile(id))),
+                "Password updated",
+            ))
+        }
+        Err(e) => Err(Flash::error(
+            Redirect::to(rocket::uri!(profile(id))),
+            e.to_string(),
         )),
     }
 }

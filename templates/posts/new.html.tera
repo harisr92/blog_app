@@ -1,0 +1,15 @@
+{% extends 'layouts/main' %}
+
+{% block content %}
+  <form method="POST" id="new_post_form" action="/posts">
+    <div>
+      <label for="post_title">Title</label>
+      <input type="text" name="title" value="" />
+    </div>
+    <div>
+      <label for="post_content">Content</label>
+      <textarea name="content" id="post_content" rows="10" cols="100" tabindex=""></textarea>
+    </div>
+    <input type="submit" name="Submit" value="Submit" />
+  </form>
+{% endblock %}

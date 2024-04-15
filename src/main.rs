@@ -5,9 +5,12 @@ use rocket_dyn_templates::Template;
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
+    let db = config::Db::init();
+
     let _rocket = rocket::build()
         .attach(Template::fairing())
-        .attach(config::Db::init())
+        .attach(db)
+        .register("/", blog_web::catchers::stage())
         .mount("/", routes::build())
         .launch()
         .await?;
