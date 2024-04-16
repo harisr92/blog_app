@@ -26,10 +26,30 @@ pub struct Post {
     pub user_id: u64,
 }
 
+#[derive(Debug, Clone, Queryable, Serialize, Deserialize)]
+pub struct PostQueryable {
+    pub id: u64,
+    pub title: String,
+    pub body: String,
+    pub status: String,
+    pub user_id: u64,
+    #[serde(serialize_with = "serialize_dt", alias = "created_date")]
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
 #[derive(Debug, rocket::FromForm)]
 pub struct PostInputForm {
     title: String,
     content: String,
+}
+
+pub fn serialize_dt<S>(dt: &chrono::NaiveDateTime, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    let res = dt.format("%d %B").to_string();
+    res.serialize(serializer)
 }
 
 impl Post {

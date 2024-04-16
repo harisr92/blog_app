@@ -9,6 +9,8 @@ diesel::table! {
         #[max_length = 50]
         status -> Varchar,
         user_id -> Unsigned<Bigint>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
     }
 }
 
@@ -28,4 +30,7 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(posts, users,);
+diesel::allow_tables_to_appear_in_same_query!(
+    posts,
+    users,
+);

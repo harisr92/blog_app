@@ -23,7 +23,11 @@ pub async fn index(
 
     Ok(Template::render(
         "auth/login",
-        context! { flash: crate::helpers::flash_label(flash) },
+        context! {
+            title: "Login",
+            flash: crate::helpers::flash_label(&flash),
+            is_signedin: false
+        },
     ))
 }
 

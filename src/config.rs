@@ -2,14 +2,16 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::request::{self, FromRequest, Request};
 use rocket_db_pools::diesel::MysqlPool;
 use rocket_db_pools::Database;
+use serde::Serialize;
 
 #[derive(Database)]
 #[database("diesel_mysql")]
 pub struct Db(MysqlPool);
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct UserSession<'a> {
     pub user_id: Option<u64>,
+    #[serde(skip)]
     cookies: Option<&'a CookieJar<'a>>,
     is_signedin: bool,
 }

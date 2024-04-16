@@ -6,7 +6,7 @@ use rocket_dyn_templates::{context, Template};
 
 use crate::config::Db;
 use crate::models::users::User;
-use crate::schema::{posts, users};
+use crate::schema::users;
 
 #[derive(Debug, rocket::FromForm)]
 pub struct UserInputable {
@@ -24,16 +24,23 @@ pub struct PasswordInput {
 }
 
 #[rocket::get("/users/new")]
-pub async fn new(flash: Option<FlashMessage<'_>>) -> Result<Template, String> {
-    let flash_messages = flash
-        .map(|msg| format!("{}", msg.message()))
-        .unwrap_or_else(|| String::from("Welcome to blog app"));
+pub async fn new(
+    flash: Option<FlashMessage<'_>>,
+    user: Option<User>,
+) -> Result<Template, Flash<Redirect>> {
+    if let Some(_) = user {
+        return Err(Flash::error(
+            Redirect::to("/users/profile"),
+            "Please logout before signing up",
+        ));
+    }
 
     Ok(Template::render(
         "users/new",
         context! {
             title: "New user",
-            flash_message: flash_messages
+            flash: crate::helpers::flash_label(&flash),
+            is_signedin: false,
         },
     ))
 }
@@ -106,7 +113,8 @@ pub async fn profile<'r>(
         context! {
             title: "Profile",
             user: user,
-            flash: crate::helpers::flash_label(flash),
+            is_signedin: true,
+            flash: crate::helpers::flash_label(&flash),
         },
     ))
 }
@@ -136,54 +144,6 @@ pub async fn update_password(
     }
 }
 
-#[rocket::get("/users/posts")]
-pub async fn users_posts(mut db: Connection<Db>) -> Result<Template, Template> {
-    let all_users = users::table
-        .left_join(posts::table.on(posts::user_id.eq(users::id)))
-        .select((
-            crate::models::users::User::as_select(),
-            Option::<crate::models::posts::Post>::as_select(),
-        ))
-        .distinct()
-        .load::<(
-            crate::models::users::User,
-            Option<crate::models::posts::Post>,
-        )>(&mut db)
-        .await;
-
-    match all_users {
-        Ok(data) => {
-            let mut grouped_data: Vec<(
-                crate::models::users::User,
-                Vec<Option<crate::models::posts::Post>>,
-            )> = Vec::new();
-
-            for user in data {
-                if let Some(with_user) = grouped_data.iter_mut().find(|u| u.0 == user.0) {
-                    with_user.1.push(user.1)
-                } else {
-                    grouped_data.push((user.0, vec![user.1]));
-                };
-            }
-
-            Ok(Template::render(
-                "users/index",
-                context! {
-                    title: "Blogs",
-                    users: grouped_data,
-                },
-            ))
-        }
-        Err(e) => Err(Template::render(
-            "error",
-            context! {
-                title: "error",
-                error: e.to_string(),
-            },
-        )),
-    }
-}
-
 async fn validate_email(email: String, db: &mut Connection<Db>) -> bool {
     let res = users::table
         .filter(users::email.eq(email))
@@ -198,5 +158,5 @@ async fn validate_email(email: String, db: &mut Connection<Db>) -> bool {
 }
 
 pub fn stage() -> Vec<rocket::Route> {
-    rocket::routes![new, create, profile, update_password, users_posts]
+    rocket::routes![new, create, profile, update_password]
 }

@@ -135,7 +135,7 @@ impl<'r> rocket::request::FromRequest<'r> for User {
                 {
                     rocket::request::Outcome::Success(user)
                 } else {
-                    rocket::request::Outcome::Error((Status::InternalServerError, ()))
+                    rocket::request::Outcome::Error((Status::NotFound, ()))
                 }
             }
             None => rocket::request::Outcome::Error((Status::Unauthorized, ())),
