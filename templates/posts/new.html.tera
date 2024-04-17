@@ -13,7 +13,7 @@
 
 {% block content %}
 <section class="bg-white dark:bg-gray-900">
-  <div class="py-8 px-4 mx-auto max-w-2xl lg:py-16">
+  <div class="py-8 px-4 lg:py-5">
       <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Write your blog</h2>
       <form action="/posts" method="POST" id="new-post-form">
           <div class="grid gap-4 sm:grid-cols-2 sm:gap-6">
