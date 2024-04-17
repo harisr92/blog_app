@@ -8,7 +8,7 @@
         <div class="flex flex-col items-center p-8 py-12 text-center dark:text-gray-800">
           <span>{{ posts[0].created_at }}</span>
           <h1 class="py-4 text-5xl font-bold">{{ posts[0].title }}</h1>
-          <p class="pb-6">{{ posts[0].body | truncate(length=40) }}</p>
+          <p class="pb-6">{{ posts[0].body | truncate(length=40) | safe }}</p>
           <a href="/posts/{{ posts[0].id }}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-7 h-7">
               <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd">
@@ -23,7 +23,7 @@
           <div class="pt-6 pb-4 space-y-2">
             <span>{{ post.created_at }}</span>
             <h1 class="text-3xl font-bold">{{ post.title }}</h1>
-            <p>{{ post.body | truncate(length=100) }}</p>
+            <p>{{ post.body | truncate(length=100) | safe }}</p>
             <a href="/posts/{{ post.id }}"
                class="inline-flex items-center py-2 space-x-2 text-sm dark:text-violet-600">
               <span>Read more</span>

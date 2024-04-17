@@ -38,7 +38,7 @@ pub struct PostQueryable {
     pub updated_at: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, rocket::FromForm)]
+#[derive(Debug, rocket::FromForm, Serialize, Deserialize)]
 pub struct PostInputForm {
     title: String,
     content: String,
@@ -53,11 +53,11 @@ where
 }
 
 impl Post {
-    pub fn build_from(form: PostInputForm, user_id: u64) -> Self {
+    pub fn build_from(form: &PostInputForm, user_id: u64) -> Self {
         Post {
             id: 0,
-            title: form.title,
-            body: form.content,
+            title: form.title.clone(),
+            body: form.content.clone(),
             status: String::from(*Self::states().front().unwrap()),
             user_id,
         }
@@ -65,5 +65,11 @@ impl Post {
 
     pub fn states() -> LinkedList<&'static str> {
         LinkedList::from(["Draft", "Review", "Published"])
+    }
+}
+
+impl PostInputForm {
+    pub fn new(title: String, content: String) -> Self {
+        PostInputForm { title, content }
     }
 }

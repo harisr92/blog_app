@@ -7,7 +7,7 @@ use rocket_dyn_templates::{context, Template};
 
 use crate::config::Db;
 use crate::models;
-use crate::schema::posts;
+use crate::schema::{posts, users};
 
 #[rocket::get("/")]
 pub async fn index(
@@ -41,11 +41,14 @@ pub async fn index(
 
 #[rocket::get("/posts/new")]
 pub async fn new(_user: crate::models::users::User) -> Result<Template, &'static str> {
+    let post_input = models::posts::PostInputForm::new("".to_string(), "".to_string());
+
     Ok(Template::render(
         "posts/new",
         context! {
             title: "Post",
             is_signedin: true,
+            post_input
         },
     ))
 }
@@ -56,7 +59,8 @@ pub async fn create(
     post_input: Form<models::posts::PostInputForm>,
     mut db: Connection<Db>,
 ) -> Result<Flash<Redirect>, Flash<Template>> {
-    let post = models::posts::Post::build_from(post_input.into_inner(), user.id);
+    let input = post_input.into_inner();
+    let post = models::posts::Post::build_from(&input, user.id);
 
     let values = diesel::insert_into(posts::table)
         .values(&post)
@@ -73,7 +77,7 @@ pub async fn create(
                 "/posts/new",
                 context! {
                     title: "New Post",
-                    post: post,
+                    post_input: input,
                     is_signedin: true,
                 },
             ),
@@ -105,6 +109,43 @@ pub async fn my_posts(
     }
 }
 
+#[rocket::get("/posts/<id>")]
+async fn show(
+    id: u64,
+    user: Option<models::users::User>,
+    mut db: Connection<Db>,
+) -> Result<Template, &'static str> {
+    let mut is_signedin = false;
+    let mut can_edit = false;
+
+    if let Ok(post) = posts::table
+        .left_join(users::table.on(users::id.eq(posts::user_id)))
+        .filter(posts::id.eq(id))
+        .first::<(models::posts::PostQueryable, Option<models::users::User>)>(&mut db)
+        .await
+    {
+        if let Some(u) = user {
+            is_signedin = true;
+            if let Some(pu) = &post.1 {
+                can_edit = u.id == pu.id;
+            }
+        }
+
+        Ok(Template::render(
+            "posts/show",
+            context! {
+                title: "Post",
+                post: post.0,
+                post_user: post.1,
+                is_signedin,
+                can_edit,
+            },
+        ))
+    } else {
+        Err("Something went wrong")
+    }
+}
+
 #[rocket::delete("/posts/<id>")]
 async fn delete(
     id: u64,
@@ -129,5 +170,5 @@ async fn delete(
 }
 
 pub fn stage() -> Vec<rocket::Route> {
-    rocket::routes![index, new, create, my_posts, delete]
+    rocket::routes![index, new, create, my_posts, show, delete]
 }
