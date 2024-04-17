@@ -146,6 +146,56 @@ async fn show(
     }
 }
 
+#[rocket::get("/posts/<id>/edit")]
+async fn edit(
+    id: u64,
+    user: models::users::User,
+    mut db: Connection<Db>,
+) -> Result<Template, &'static str> {
+    if let Ok(post) = posts::table
+        .filter(posts::id.eq(id).and(posts::user_id.eq(user.id)))
+        .first::<models::posts::PostQueryable>(&mut db)
+        .await
+    {
+        Ok(Template::render(
+            "posts/edit",
+            context! {
+                title: "Edit post",
+                post: post,
+                is_signedin: true,
+            },
+        ))
+    } else {
+        Err("Something went wrong")
+    }
+}
+
+#[rocket::put("/posts/<id>", data = "<input>")]
+pub async fn update(
+    id: u64,
+    input: Form<models::posts::PostInputForm>,
+    user: models::users::User,
+    mut db: Connection<Db>,
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
+    let post = models::posts::Post::build_from(&input, user.id);
+    let res = diesel::update(posts::table)
+        .filter(posts::id.eq(id).and(posts::user_id.eq(user.id)))
+        .set(post)
+        .execute(&mut db)
+        .await;
+
+    match res {
+        Ok(_) => Ok(Flash::success(
+            Redirect::to(rocket::uri!(show(id))),
+            "Article updated successfully",
+        )),
+        Err(e) => Err(Flash::error(
+            Redirect::to(rocket::uri!(show(id))),
+            e.to_string(),
+        )),
+    }
+}
+
 #[rocket::delete("/posts/<id>")]
 async fn delete(
     id: u64,
@@ -170,5 +220,5 @@ async fn delete(
 }
 
 pub fn stage() -> Vec<rocket::Route> {
-    rocket::routes![index, new, create, my_posts, show, delete]
+    rocket::routes![index, new, create, my_posts, show, edit, update, delete]
 }

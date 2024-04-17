@@ -13,6 +13,7 @@ use std::collections::LinkedList;
     Associations,
     PartialEq,
     Insertable,
+    AsChangeset,
 )]
 #[serde(crate = "rocket::serde")]
 #[diesel(belongs_to(crate::models::users::User))]
