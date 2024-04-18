@@ -107,7 +107,7 @@
           {% endif %}
           <!-- /Alert flash -->
 
-          <div class="rounded overflow-hidden shadow-lg mt-5">
+          <div class="rounded overflow-hidden shadow-lg">
             <nav class="bg-white border-gray-200 dark:bg-gray-900">
                 <div class="flex flex-wrap justify-between items-center mx-auto max-w-screen-xl p-4">
                     <a href="/" class="flex items-center space-x-3 rtl:space-x-reverse">
