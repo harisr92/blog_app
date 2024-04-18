@@ -885,10 +885,6 @@ video {
   width: 100%;
 }
 
-.max-w-2xl {
-  max-width: 42rem;
-}
-
 .max-w-md {
   max-width: 28rem;
 }
@@ -903,11 +899,6 @@ video {
 
 .max-w-xs {
   max-width: 20rem;
-}
-
-.max-w-fit {
-  max-width: -moz-fit-content;
-  max-width: fit-content;
 }
 
 .shrink {
@@ -1099,6 +1090,11 @@ video {
 .rounded-s-lg {
   border-start-start-radius: 0.5rem;
   border-end-start-radius: 0.5rem;
+}
+
+.rounded-e-md {
+  border-start-end-radius: 0.375rem;
+  border-end-end-radius: 0.375rem;
 }
 
 .border {
@@ -1751,11 +1747,6 @@ video {
   .lg\:px-0 {
     padding-left: 0px;
     padding-right: 0px;
-  }
-
-  .lg\:py-16 {
-    padding-top: 4rem;
-    padding-bottom: 4rem;
   }
 
   .lg\:py-5 {

@@ -93,6 +93,7 @@ pub async fn my_posts(
 ) -> Result<Template, String> {
     let result = posts::table
         .filter(posts::user_id.eq(user.id))
+        .order(posts::created_at.desc())
         .load::<models::posts::PostQueryable>(&mut db)
         .await;
 
@@ -196,6 +197,39 @@ pub async fn update(
     }
 }
 
+#[rocket::put("/posts/<id>/publish")]
+pub async fn publish(
+    id: u64,
+    user: models::users::User,
+    mut db: Connection<Db>,
+) -> Result<Flash<Redirect>, Flash<Redirect>> {
+    let mut post: models::posts::Post = posts::table
+        .filter(posts::id.eq(id).and(posts::user_id.eq(user.id)))
+        .select(models::posts::Post::as_select())
+        .first(&mut db)
+        .await
+        .ok()
+        .expect("Could not find post");
+
+    post.publish();
+    let res = diesel::update(posts::table)
+        .filter(posts::id.eq(post.id))
+        .set(posts::status.eq(post.status))
+        .execute(&mut db)
+        .await;
+
+    match res {
+        Ok(_) => Ok(Flash::success(
+            Redirect::to(rocket::uri!(show(id))),
+            "Article updated successfully",
+        )),
+        Err(e) => Err(Flash::error(
+            Redirect::to(rocket::uri!(show(id))),
+            e.to_string(),
+        )),
+    }
+}
+
 #[rocket::delete("/posts/<id>")]
 async fn delete(
     id: u64,
@@ -220,5 +254,5 @@ async fn delete(
 }
 
 pub fn stage() -> Vec<rocket::Route> {
-    rocket::routes![index, new, create, my_posts, show, edit, update, delete]
+    rocket::routes![index, new, create, my_posts, show, edit, update, publish, delete]
 }
