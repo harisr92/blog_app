@@ -7,8 +7,9 @@ use rocket_dyn_templates::{context, Template};
 use crate::config::Db;
 use crate::models::users::User;
 use crate::schema::users;
+use serde::Serialize;
 
-#[derive(Debug, rocket::FromForm)]
+#[derive(Debug, rocket::FromForm, Serialize)]
 pub struct UserInputable {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
@@ -17,7 +18,7 @@ pub struct UserInputable {
     pub confirm_password: String,
 }
 
-#[derive(Debug, rocket::FromForm)]
+#[derive(Debug, rocket::FromForm, Serialize)]
 pub struct PasswordInput {
     pub password: String,
     pub confirm_password: String,
@@ -51,18 +52,29 @@ pub async fn create<'r>(
     user_input: Form<UserInputable>,
     user_session: crate::config::UserSession<'_>,
 ) -> Result<Flash<Redirect>, Template> {
-    if !validate_email(user_input.email.clone(), &mut db).await {
-        return Ok(Flash::error(
-            Redirect::to("/users/new"),
-            "Email already taken",
+    let inner = user_input.into_inner();
+
+    if !validate_email(inner.email.clone(), &mut db).await {
+        return Err(Template::render(
+            "users/new",
+            context! {
+                title: "New user",
+                user: inner,
+                flash: crate::helpers::FlashLabel::error("Invalid email"),
+                is_signedin: false,
+            },
         ));
     }
 
-    let inner = user_input.into_inner();
     if inner.password != inner.confirm_password {
-        return Ok(Flash::error(
-            Redirect::to("/users/new"),
-            "Password does not match",
+        return Err(Template::render(
+            "users/new",
+            context! {
+                title: "New user",
+                user: inner,
+                flash: crate::helpers::FlashLabel::error("Password must match"),
+                is_signedin: false,
+            },
         ));
     }
 
@@ -124,11 +136,23 @@ pub async fn update_password(
     password: Form<PasswordInput>,
     mut user: User,
     mut db: Connection<Db>,
-) -> Result<Flash<Redirect>, Flash<Redirect>> {
+) -> Result<Flash<Redirect>, Template> {
+    if password.password != password.confirm_password {
+        return Err(Template::render(
+            "users/profile",
+            context! {
+                title: "Profile",
+                user: user,
+                flash: crate::helpers::FlashLabel::error("Password must match"),
+                is_signedin: true,
+            },
+        ));
+    }
+
     user.set_password(password.into_inner().password);
     let res = diesel::update(users::table)
         .filter(users::id.eq(user.id))
-        .set(user)
+        .set(user.clone())
         .execute(&mut db)
         .await;
 
@@ -137,10 +161,19 @@ pub async fn update_password(
             Redirect::to(rocket::uri!(profile())),
             "Password updated",
         )),
-        Err(e) => Err(Flash::error(
-            Redirect::to(rocket::uri!(profile())),
-            e.to_string(),
-        )),
+        Err(e) => {
+            return Err(Template::render(
+                "users/profile",
+                context! {
+                    title: "Profile",
+                    user: user,
+                    flash: crate::helpers::FlashLabel::error(
+                        &format!("Something went wrong : {}", e.to_string())[..]
+                    ),
+                    is_signedin: true,
+                },
+            ))
+        }
     }
 }
 

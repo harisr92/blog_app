@@ -56,10 +56,30 @@ pub async fn new(_user: crate::models::users::User) -> Result<Template, &'static
 #[rocket::post("/posts", data = "<post_input>")]
 pub async fn create(
     user: models::users::User,
-    post_input: Form<models::posts::PostInputForm>,
+    post_input: rocket::form::Result<'_, Form<models::posts::PostInputForm>>,
     mut db: Connection<Db>,
-) -> Result<Flash<Redirect>, Flash<Template>> {
-    let input = post_input.into_inner();
+) -> Result<Flash<Redirect>, Template> {
+    if let Err(e) = post_input {
+        let err_messages = e
+            .iter()
+            .map(|v_err| v_err.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let post_empty = models::posts::PostInputForm::new("".to_string(), "".to_string());
+        return Err(Template::render(
+            "posts/new",
+            context! {
+                title: "New Post",
+                is_signedin: true,
+                post_input: post_empty,
+                flash: crate::helpers::FlashLabel::error(
+                    &format!("Failed to create post: {}", err_messages)[..]
+                ),
+            },
+        ));
+    }
+    let input = post_input.ok().unwrap().into_inner();
     let post = models::posts::Post::build_from(&input, user.id);
 
     let values = diesel::insert_into(posts::table)
@@ -72,16 +92,16 @@ pub async fn create(
             Redirect::to("/"),
             "Post created successfully",
         )),
-        Err(_) => Err(Flash::error(
-            Template::render(
-                "/posts/new",
-                context! {
-                    title: "New Post",
-                    post_input: input,
-                    is_signedin: true,
-                },
-            ),
-            "Failed to create post",
+        Err(e) => Err(Template::render(
+            "posts/new",
+            context! {
+                title: "New Post",
+                post_input: input,
+                is_signedin: true,
+                flash: crate::helpers::FlashLabel::error(
+                    &format!("Failed to create post: {}", e.to_string())[..]
+                ),
+            },
         )),
     }
 }

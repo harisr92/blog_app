@@ -1,5 +1,6 @@
 use diesel::deserialize::{self, Queryable};
 use diesel::prelude::*;
+use rocket::form::FromForm;
 use scraper::element_ref::ElementRef;
 use scraper::html::Html;
 use serde::{Deserialize, Serialize};
@@ -25,8 +26,6 @@ pub struct Post {
     pub id: u64,
     pub title: String,
     pub body: String,
-    #[diesel(column_name = body)]
-    pub truncated_content: String,
     pub status: String,
     pub user_id: u64,
 }
@@ -75,9 +74,11 @@ impl Queryable<crate::schema::posts::SqlType, DB> for PostQueryable {
     }
 }
 
-#[derive(Debug, rocket::FromForm, Serialize, Deserialize)]
+#[derive(Debug, FromForm, Serialize, Deserialize)]
 pub struct PostInputForm {
+    #[field(validate = len(2..).or_else(msg!("Title should be atleast 2 characters")))]
     title: String,
+    #[field(validate = len(30..).or_else(msg!("Content should be atleast 30 characters")))]
     content: String,
 }
 
@@ -96,7 +97,6 @@ impl Post {
             title: form.title.clone(),
             body: form.content.clone(),
             status: String::from("Draft"),
-            truncated_content: "".to_string(),
             user_id,
         }
     }

@@ -30,6 +30,11 @@ fn server_error(_req: &Request) -> Template {
     )
 }
 
+#[rocket::catch(422)]
+fn unprocessable_entity(_req: &Request) -> Flash<Redirect> {
+    Flash::error(Redirect::to("/"), "Invalid data")
+}
+
 pub fn stage() -> Vec<rocket::Catcher> {
-    rocket::catchers![unauthorized, not_found, server_error]
+    rocket::catchers![unauthorized, not_found, server_error, unprocessable_entity]
 }
