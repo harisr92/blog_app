@@ -1,0 +1,32 @@
+version: '3'
+services:
+  web:
+    build: .
+    command: |
+      /app/target/release/blog_web
+    ports:
+      - 8000:8000
+    depends_on:
+      blogdb:
+        condition: service_healthy
+
+  blogdb:
+    image: mysql:8.3.0
+    restart: always
+    environment:
+      - MYSQL_DATABASE=${DB_NAME:-blog_db}
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - type: volume
+        source: blog_web_db
+        target: /var/lib/mysql:rw
+        volume:
+          nocopy: true
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+
+volumes:
+  blog_web_db:

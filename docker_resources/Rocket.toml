@@ -1,0 +1,13 @@
+[default]
+address = "0.0.0.0"
+
+[debug]
+secret_key = "03UFYHD15B/4aj8dnsSf0LgbOkb7SAYQU0pmaJdqk9o="
+address = "0.0.0.0"
+
+[release]
+secret_key = "Q34Ju97TuOAETPV/qCnWDAvRnkBhz957C65lPYMstyU="
+address = "0.0.0.0"
+
+[default.databases.diesel_mysql]
+url = "mysql://root:root@blogdb:3306/blog_db"
