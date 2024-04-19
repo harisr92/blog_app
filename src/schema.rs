@@ -24,9 +24,9 @@ diesel::table! {
         #[max_length = 252]
         email -> Varchar,
         #[max_length = 256]
-        encrypted_password -> Nullable<Varchar>,
+        encrypted_password -> Varchar,
         #[max_length = 50]
-        password_salt -> Nullable<Varchar>,
+        password_salt -> Varchar,
     }
 }
 

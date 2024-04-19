@@ -27,8 +27,8 @@ pub struct User {
     pub first_name: Option<String>,
     pub last_name: Option<String>,
     pub email: String,
-    encrypted_password: Option<String>,
-    password_salt: Option<String>,
+    pub encrypted_password: String,
+    pub password_salt: String,
 }
 
 impl User {
@@ -38,16 +38,15 @@ impl User {
         email: String,
         password: String,
     ) -> Self {
-        let mut u = User {
+        let pass_and_salt = Self::hash_password(password);
+        User {
             id: 0,
             first_name,
             last_name,
             email,
-            encrypted_password: None,
-            password_salt: None,
-        };
-        u.set_password(password);
-        u
+            encrypted_password: pass_and_salt.0,
+            password_salt: pass_and_salt.1,
+        }
     }
 
     pub async fn find_by_id(id: u64, mut db: Connection<crate::config::Db>) -> Option<Self> {
@@ -78,31 +77,32 @@ impl User {
     }
 
     pub fn set_password(&mut self, password: String) {
+        (self.encrypted_password, self.password_salt) = Self::hash_password(password);
+    }
+
+    pub fn compare_password(&self, password: String) -> bool {
+        let parsed_hash: PasswordHash;
+        if let Ok(res) = PasswordHash::new(&self.encrypted_password) {
+            parsed_hash = res;
+        } else {
+            return false;
+        };
+
+        if let Ok(_) = Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn hash_password(password: String) -> (String, String) {
         let salt = SaltString::generate(&mut OsRng);
         let argon = Argon2::default();
 
         if let Ok(password_hash) = argon.hash_password(password.as_bytes(), &salt) {
-            self.encrypted_password = Some(password_hash.to_string());
-            self.password_salt = Some(salt.to_string());
-        }
-    }
-
-    pub fn compare_password(&self, password: String) -> bool {
-        if let Some(enc_pass) = &self.encrypted_password {
-            let parsed_hash: PasswordHash;
-            if let Ok(res) = PasswordHash::new(&enc_pass) {
-                parsed_hash = res;
-            } else {
-                return false;
-            };
-
-            if let Ok(_) = Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
-                true
-            } else {
-                false
-            }
+            (password_hash.to_string(), salt.to_string())
         } else {
-            false
+            panic!("Could not hash password");
         }
     }
 }
@@ -140,5 +140,25 @@ impl<'r> rocket::request::FromRequest<'r> for User {
             }
             None => rocket::request::Outcome::Error((Status::Unauthorized, ())),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::models::users::User;
+
+    #[test]
+    fn it_builds_new_user() {
+        let user = User::build(
+            Some("Bruce".to_string()),
+            Some("Wayne".to_string()),
+            "brucewayne.com".to_string(),
+            "hello2world!".to_string(),
+        );
+
+        assert_eq!(user.id, 0);
+        assert_eq!(user.first_name, Some("Bruce".to_string()));
+        assert_eq!(user.last_name, Some("Wayne".to_string()));
+        assert_eq!(user.email, "brucewayne.com".to_string());
     }
 }
