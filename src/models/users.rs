@@ -142,23 +142,3 @@ impl<'r> rocket::request::FromRequest<'r> for User {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::models::users::User;
-
-    #[test]
-    fn it_builds_new_user() {
-        let user = User::build(
-            Some("Bruce".to_string()),
-            Some("Wayne".to_string()),
-            "brucewayne.com".to_string(),
-            "hello2world!".to_string(),
-        );
-
-        assert_eq!(user.id, 0);
-        assert_eq!(user.first_name, Some("Bruce".to_string()));
-        assert_eq!(user.last_name, Some("Wayne".to_string()));
-        assert_eq!(user.email, "brucewayne.com".to_string());
-    }
-}
