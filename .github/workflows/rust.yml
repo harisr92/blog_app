@@ -34,5 +34,5 @@ jobs:
         ROCKET_CONFIG: .github/Rocket.test.toml
       run: |
         cargo install diesel_cli
-        diesel migration run --database-url mysql://root:root@blogdb:3306/blog_test
+        diesel migration run --database-url mysql://root:root@127.0.0.1:3306/blog_test
         cargo test --verbose
