@@ -1,26 +1,12 @@
 use crate::config::Db;
 use rocket::config::Config;
-use rocket::fairing::AdHoc;
 use rocket::figment::providers::{Env, Format, Toml};
 use rocket::figment::Figment;
-use rocket::tokio::sync::Barrier;
-use rocket::{Build, Rocket, State};
+use rocket::{Build, Rocket};
 use rocket_db_pools::Database;
 
-#[rocket::get("/barrier")]
-async fn rendezvous(barrier: &State<Barrier>) -> &'static str {
-    println!("Waiting for second task...");
-    barrier.wait().await;
-    "Rendezvous reached."
-}
-
 pub fn rocket() -> Rocket<Build> {
-    rocket::custom(rocket_config_figment())
-        .mount("/", rocket::routes![rendezvous])
-        .attach(Db::init())
-        .attach(AdHoc::on_ignite("Add Channel", |rocket| async {
-            rocket.manage(Barrier::new(2))
-        }))
+    rocket::custom(rocket_config_figment()).attach(Db::init())
 }
 
 fn rocket_config_figment() -> Figment {
@@ -79,5 +65,64 @@ mod tests {
 
         assert_eq!(user_by_id.email, "bruce@wayne.com".to_string());
         assert_eq!(user_by_id.id, user.id);
+    }
+
+    #[rocket::async_test]
+    async fn it_finds_user_by_email() {
+        let rocket_client = get_rocket_client().await;
+        let req = rocket_client.get("/users/profile");
+        let mut db: Connection<Db> = req.guard().await.expect("Could not connect to db");
+
+        let u = User::build(
+            Some("Bruce".to_string()),
+            Some("Wayne".to_string()),
+            "bruce@wayne.com".to_string(),
+            "hello2world!".to_string(),
+        );
+        let _ = diesel::insert_into(crate::schema::users::table)
+            .values(&u)
+            .execute(&mut db)
+            .await;
+        let user = User::find_by_email(u.email.clone(), db).await.unwrap();
+
+        assert_eq!(user.email, u.email);
+    }
+
+    #[test]
+    fn it_sets_pasword() {
+        let mut u = User::build(
+            Some("Bruce".to_string()),
+            Some("Wayne".to_string()),
+            "bruce@wayne.com".to_string(),
+            "hello2world!".to_string(),
+        );
+
+        let password = "mynewpassword".to_string();
+        u.set_password(password.clone());
+        assert_eq!(u.compare_password(password), true);
+    }
+
+    #[test]
+    fn it_compares_pasword_and_return_true_if_valid() {
+        let u = User::build(
+            Some("Bruce".to_string()),
+            Some("Wayne".to_string()),
+            "bruce@wayne.com".to_string(),
+            "hello2world!".to_string(),
+        );
+
+        assert_eq!(u.compare_password("hello2world!".to_string()), true);
+    }
+
+    #[test]
+    fn it_compares_pasword_and_return_false_if_invalid() {
+        let u = User::build(
+            Some("Bruce".to_string()),
+            Some("Wayne".to_string()),
+            "bruce@wayne.com".to_string(),
+            "hello2world!".to_string(),
+        );
+
+        assert_eq!(u.compare_password("Wrongpassword".to_string()), false);
     }
 }
