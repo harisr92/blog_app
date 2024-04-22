@@ -143,5 +143,5 @@ pub fn sanitize_body(content: String) -> String {
         .collect::<Vec<_>>()
         .join(" ");
 
-    doc_text[..50].to_string()
+    doc_text[..30].to_string()
 }

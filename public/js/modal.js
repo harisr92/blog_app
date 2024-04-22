@@ -2,6 +2,7 @@ class Instances {
     constructor() {
         this._instances = {
             Modal: {},
+            Editor: {}
         };
     }
     addInstance(component, instance, id, override = false) {
