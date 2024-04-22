@@ -1,11 +1,12 @@
-version: '3'
 services:
   web:
     build: .
     command: |
-      /app/target/release/blog_web
+      /app/blog_web
     ports:
       - 8000:8000
+    environment:
+      DATABASE_URL: "mysql://root:root@blogdb:3306/blog_db"
     depends_on:
       blogdb:
         condition: service_healthy
